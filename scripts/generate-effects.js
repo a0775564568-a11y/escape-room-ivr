@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const RATE = 8000;
 const here = dirname(fileURLToPath(import.meta.url));
-const outDir = process.argv[2] || join(here, '..', 'audio', 'effects');
+const outDir = process.argv[2] || join(here, '..', 'audio');
 mkdirSync(outDir, { recursive: true });
 
 // מחולל רעש דטרמיניסטי כדי שהתוצאה תהיה זהה בכל הרצה

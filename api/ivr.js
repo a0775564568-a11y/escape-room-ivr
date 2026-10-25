@@ -1,9 +1,12 @@
-// נקודת הקצה ש-ימות המשיח קוראת לה (type=api). אין בה טוקן של ימות המשיח.
-// ימות המשיח שולחת פרמטרים: ApiPhone, ApiCallId, ApiTime, ו-in (ההקשה האחרונה).
+// נקודת הקצה ש-ימות המשיח קוראת לה: https://escape-room-ivr.vercel.app/api/ivr
+// הגדרות השלוחה (type=api, api_link) מפורטות ב-README.
+// ימות המשיח שולחת פרמטרים: ApiPhone, ApiCallId, ApiExtension, in (ההקשה האחרונה),
+// ובנוסף הפרמטרים הקבועים שמוגדרים בשלוחה ב-api_add_X, למשל advanced_audio ו-ym_token.
 import { step, newState } from '../lib/engine.js';
-import { readAction, hangupAction } from '../lib/yemot.js';
+import { MESSAGES } from '../lib/game.js';
+import { readAction, resolveAudioBase } from '../lib/yemot.js';
 import { loadState, saveState } from '../lib/store.js';
-
+import { listAudioFiles } from '../lib/audio-list.js';
 
 function params(req) {
   if (req.method === 'POST') {
@@ -22,12 +25,6 @@ function send(res, status, text) {
 
 export default async function handler(req, res) {
   const p = params(req);
-
-  // הגנה אופציונלית: סוד משותף בין ימות המשיח לשרת (לא טוקן של ימות המשיח).
-  // מגדירים IVR_SECRET ב-Vercel ומוסיפים ?k=... בכתובת ה-api_link.
-  if (process.env.IVR_SECRET && p.k !== process.env.IVR_SECRET) {
-    return send(res, 403, 'noop=forbidden');
-  }
 
   // ניתוק שיחה: שומרים את ההתקדמות ומסיימים.
   if (p.hangup === 'yes') {
@@ -51,10 +48,18 @@ export default async function handler(req, res) {
     const result = step(saved, input);
     await saveState(phone, result.state);
 
-    return send(res, 200, readAction({ key: result.key, text: result.text, min: 1, max: 4 }));
+    // הגדרות השלוחה: מצב השמעה מתקדם, והטוקן המתקדם (נדרש רק במצב מתקדם)
+    const advanced = p.advanced_audio === 'yes';
+    const base = resolveAudioBase(p.ApiExtension);
+    let available = null;
+    if (advanced) {
+      available = p.ym_token ? await listAudioFiles(p.ym_token, base || '') : new Set();
+    }
+
+    return send(res, 200, readAction(result.parts, { advanced, base, available }));
   } catch (err) {
     // שגיאה בשמירה או ברשת: לא מנתקים את המתקשר, מבקשים הקשה מחדש.
     console.error('ivr error', err && err.message);
-    return send(res, 200, readAction({ key: null, text: MESSAGES.error, min: 1, max: 4 }));
+    return send(res, 200, readAction([{ key: 'error', text: MESSAGES.error }]));
   }
 }
