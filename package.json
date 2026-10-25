@@ -1,0 +1,14 @@
+{
+  "name": "blackwood-ivr-escape-room",
+  "version": "1.0.0",
+  "description": "חדר בריחה טלפוני 'הסוד של אחוזת בלקווד' עבור ימות המשיח",
+  "type": "module",
+  "private": true,
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "test": "node scripts/test-game.js",
+    "effects": "node scripts/generate-effects.js",
+    "docs": "node scripts/build-docs.js"
+  },
+  "license": "UNLICENSED"
+}
